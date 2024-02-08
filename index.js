@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 const fs = require('fs');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const jsonData = require('./data.json');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
@@ -71,7 +71,18 @@ const transport = nodemailer.createTransport({
   // async..await is not allowed in global scope, must use a wrapper
 
   async function generatePDF(htmlContent, outputPath) {
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        args: [
+          "--disable-setuid-sandbox",
+          "--no-sandbox",
+          "--single-process",
+          "--no-zygote",
+        ],
+        executablePath:
+          process.env.NODE_ENV === "production"
+            ? process.env.PUPPETEER_EXECUTABLE_PATH
+            : puppeteer.executablePath(),
+        });
     const page = await browser.newPage();
     await page.setContent(htmlContent);
     await page.pdf({ path: outputPath, format: 'A4' });
@@ -663,7 +674,6 @@ app.get('/save', async (req, res) => {
 app.post('/submitForm3', async (req, res) => {
     data3 = await req.body;
     jsonData.image = data3.signatureImage
-    const filePath = 'signature.png';
     console.log(data3)
  
     
@@ -671,8 +681,8 @@ app.post('/submitForm3', async (req, res) => {
 });
 
 
+const PORT = process.env.PORT || 3000;
 
-app.listen(3000, () => {
-    console.log('Server is running on port 3000');
+app.listen(PORT, () => {
+    console.log(`Listening on port ${PORT}`);
 });
-
